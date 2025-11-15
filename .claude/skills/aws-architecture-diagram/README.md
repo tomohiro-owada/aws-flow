@@ -1,5 +1,9 @@
 # AWS Architecture Diagram Skill
 
+**Languages:** [日本語](README.md) | [English](README_en.md)
+
+---
+
 Mermaidダイアグラムやテキスト記述からAWS Architecture Diagram（インタラクティブなHTML図）を生成するスキルです。
 
 ## 🚀 クイックスタート
