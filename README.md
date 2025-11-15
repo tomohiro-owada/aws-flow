@@ -2,6 +2,9 @@
 
 Mermaidダイアグラムやテキスト記述からAWS Architecture Diagram（インタラクティブなHTML図）を生成するスキルです。
 
+<img width="1183" height="840" alt="スクリーンショット 2025-11-15 午前10 28 57" src="https://github.com/user-attachments/assets/89160cfc-e037-41c9-b03e-032741531ab3" />
+
+
 ## 🚀 クイックスタート
 
 ### ステップ 1: AWS アイコンのセットアップ
