@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="AWS Architecture Diagram">
+  <title>AWS Architecture Diagram</title>
+
+  <!-- JointJS Dependencies (required for v3) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/backbone.js/1.4.0/backbone-min.js"></script>
+
+  <!-- JointJS Library (v3) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jointjs/3.6.2/joint.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jointjs/3.6.2/joint.min.css">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    /* ============================================
+       AWS Architecture Diagram Styles
+       ICON EMBEDDING:
+       All SVG icons should be embedded directly from assets directory:
+       - SVG files: ./assets/Architecture-Service-Icons_02072025/[Category]/48/Arch_[ServiceName]_48.svg
+       - PNG files: ./assets/Architecture-Service-Icons_02072025/[Category]/48/Arch_[ServiceName]_48.png
+       - Embedded as: <svg>...</svg> inline (SVG) or <image href="..."> (PNG)
+       - Size: 48×48px, position top-left (8px margin)
+       ============================================ */
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background-color: #f9fafb;
+    }
+
+    #diagram-container {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: #ffffff;
+    }
+
+    /* Header */
+    #diagram-header {
+      padding: 16px 24px;
+      background-color: #ffffff;
+      border-bottom: 1px solid #e5e7eb;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    #diagram-title {
+      font-size: 24px;
+      font-weight: 600;
+      color: #1f2937;
+      margin: 0;
+    }
+
+    #diagram-controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    /* Canvas Area */
+    #canvas-wrapper {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background-color: #ffffff;
+    }
+
+    #paper {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    /* JointJS Custom Styles */
+    .joint-element {
+      pointer-events: auto;
+    }
+
+    .joint-element:hover {
+      filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+    }
+
+    /* Category Group Styles */
+    .category-group {
+      fill: #f9fafb;
+      stroke: #d1d5db;
+      stroke-width: 2;
+      rx: 8;
+    }
+
+    .category-group-header {
+      fill: #ffffff;
+      stroke: #d1d5db;
+      stroke-width: 1;
+    }
+
+    .category-label {
+      font-size: 14px;
+      font-weight: 600;
+      text-anchor: middle;
+      fill: #374151;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    /* Service Component Styles - White background with colored border */
+    .service-component {
+      fill: #ffffff;
+      stroke: #d1d5db;
+      stroke-width: 2;
+      rx: 6;
+    }
+
+    .service-component.compute {
+      stroke: #ED7100;
+      stroke-width: 2.5;
+    }
+
+    .service-component.database {
+      stroke: #E7157B;
+      stroke-width: 2.5;
+    }
+
+    .service-component.analytics {
+      stroke: #01A88D;
+      stroke-width: 2.5;
+    }
+
+    .service-component.storage {
+      stroke: #7AA116;
+      stroke-width: 2.5;
+    }
+
+    .service-component.security {
+      stroke: #DD344C;
+      stroke-width: 2.5;
+    }
+
+    .service-component.integration {
+      stroke: #C925D1;
+      stroke-width: 2.5;
+    }
+
+    .service-component.management {
+      stroke: #8C4FFF;
+      stroke-width: 2.5;
+    }
+
+    .service-component.external {
+      stroke: #232F3E;
+      stroke-width: 2.5;
+    }
+
+    .service-component:hover {
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
+    }
+
+    /* Service Icon Styles */
+    .service-icon {
+      width: 48px;
+      height: 48px;
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      object-fit: contain;
+    }
+
+    .service-label {
+      font-size: 13px;
+      font-weight: 500;
+      text-anchor: middle;
+      fill: #1f2937;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    /* Connection/Link Styles */
+    .connection {
+      stroke: #6b7280;
+      stroke-width: 2;
+      fill: none;
+      pointer-events: none;
+    }
+
+    .connection-marker {
+      fill: #6b7280;
+    }
+
+    .connection-label {
+      font-size: 12px;
+      fill: #374151;
+      background-color: #ffffff;
+      padding: 2px 4px;
+    }
+
+    /* Link Label Styles (JointJS) */
+    .label rect {
+      fill: #ffffff;
+      stroke: #d1d5db;
+      stroke-width: 1;
+      rx: 4;
+      ry: 4;
+    }
+
+    .label text {
+      font-size: 12px;
+      fill: #374151;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    /* Add padding to link labels */
+    g.label {
+      /* This group contains the label rect and text */
+    }
+
+    /* Arrow Marker */
+    defs marker {
+      overflow: visible;
+    }
+
+    marker path {
+      stroke: #6b7280;
+      fill: #6b7280;
+    }
+
+    /* Tooltip Styles */
+    .tooltip {
+      position: absolute;
+      background-color: rgba(0, 0, 0, 0.9);
+      color: #ffffff;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      pointer-events: none;
+      z-index: 1000;
+      max-width: 200px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Controls Panel */
+    .control-button {
+      padding: 8px 16px;
+      background-color: #f3f4f6;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      color: #374151;
+      transition: all 0.2s ease;
+    }
+
+    .control-button:hover {
+      background-color: #e5e7eb;
+      border-color: #9ca3af;
+    }
+
+    .control-button:active {
+      background-color: #d1d5db;
+    }
+
+    /* Footer */
+    #diagram-footer {
+      padding: 12px 24px;
+      background-color: #f9fafb;
+      border-top: 1px solid #e5e7eb;
+      font-size: 12px;
+      color: #6b7280;
+      text-align: right;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      #diagram-title {
+        font-size: 18px;
+      }
+
+      #diagram-header {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+      }
+
+      .service-label {
+        font-size: 11px;
+      }
+
+      .category-label {
+        font-size: 12px;
+      }
+
+      .connection-label {
+        font-size: 10px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      #diagram-header {
+        padding: 12px 16px;
+      }
+
+      #diagram-controls {
+        width: 100%;
+        justify-content: flex-start;
+      }
+
+      .control-button {
+        padding: 6px 12px;
+        font-size: 12px;
+      }
+    }
+
+    /* Print Styles */
+    @media print {
+      #diagram-header,
+      #diagram-footer,
+      #diagram-controls {
+        display: none;
+      }
+
+      #diagram-container {
+        background: #ffffff;
+      }
+
+      #canvas-wrapper {
+        box-shadow: none;
+      }
+
+      .joint-element:hover {
+        filter: none;
+      }
+    }
+
+    /* Loading Animation */
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #6b7280;
+      font-size: 16px;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #e5e7eb;
+      border-top: 3px solid #8C4FFF;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 12px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div id="diagram-container">
+    <!-- Header -->
+    <div id="diagram-header">
+      <h1 id="diagram-title">AWS Architecture Diagram</h1>
+      <div id="diagram-controls">
+        <button class="control-button" id="zoom-in-btn" title="Zoom In">🔍+</button>
+        <button class="control-button" id="zoom-out-btn" title="Zoom Out">🔍−</button>
+        <button class="control-button" id="fit-view-btn" title="Fit to View">⬜ Fit</button>
+        <button class="control-button" id="download-btn" title="Download as PNG">⬇ Download</button>
+      </div>
+    </div>
+
+    <!-- Canvas -->
+    <div id="canvas-wrapper">
+      <div id="paper"></div>
+      <div id="loading" class="loading" style="display: none;">
+        <div class="spinner"></div>
+        <span>Generating diagram...</span>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div id="diagram-footer">
+      <span id="diagram-info">AWS Architecture Diagram | Generated with Claude Code</span>
+    </div>
+  </div>
+
+  <!-- JointJS Diagram Script -->
+  <script>
+    // ============================================
+    // AWS Architecture Diagram - JointJS Setup
+    // ============================================
+
+    // Initialize JointJS namespace
+    const AWSDiagram = {
+      // Configuration
+      config: {
+        paperWidth: 2000,
+        paperHeight: 1500,
+        gridSize: 10,
+        snapToGrid: true,
+      },
+
+      // Color Palette (AWS Release 16 Standard)
+      colors: {
+        'Compute': '#ED7100',          // Smile - Orange
+        'Database': '#E7157B',         // Cosmos - Pink
+        'Analytics': '#01A88D',        // Orbit - Teal
+        'Storage': '#7AA116',          // Endor - Green
+        'Security': '#DD344C',         // Mars - Red
+        'Integration': '#C925D1',      // Nebula - Purple
+        'Management': '#8C4FFF',       // Galaxy - Purple-Blue
+        'External': '#232F3E',         // Squid - Navy
+        'Networking': '#01A88D',       // Orbit - Teal
+      },
+
+      // Graph and Paper instances
+      graph: null,
+      paper: null,
+
+      /**
+       * Initialize JointJS
+       */
+      init: function() {
+        try {
+          // Create graph
+          this.graph = new joint.dia.Graph({}, { cellNamespace: joint.shapes });
+
+          // Create paper
+          this.paper = new joint.dia.Paper({
+            el: document.getElementById('paper'),
+            model: this.graph,
+            width: this.config.paperWidth,
+            height: this.config.paperHeight,
+            gridSize: this.config.gridSize,
+            drawGrid: { name: 'mesh', args: { color: '#e5e7eb', thickness: 1 } },
+            background: { color: '#f9fafb' },
+            interactive: true,
+            cellViewNamespace: joint.shapes,
+            defaultLink: new joint.shapes.standard.Link(),
+            snapLinks: { radius: 20 },
+          });
+
+          // Function to update icon transforms based on paper's current zoom/pan state
+          const updateIconsTransform = () => {
+            const iconContainer = this.paper.svg.querySelector('[data-icons-container]');
+            if (!iconContainer) return;
+
+            const scale = this.paper.scale();
+            const translate = this.paper.translate();
+
+            // Apply the paper's transform to the icon container so icons follow zoom/pan
+            const transform = `translate(${translate.tx}, ${translate.ty}) scale(${scale.sx}, ${scale.sy})`;
+            iconContainer.setAttribute('transform', transform);
+          };
+
+          // Register zoom/pan event handlers for icon synchronization
+          this.paper.on('scale', updateIconsTransform);
+          this.paper.on('translate', updateIconsTransform);
+
+          // Bind event handlers
+          this.bindEventHandlers();
+
+          // Sync icon positions when components are dragged
+          const self = this;
+          this.graph.on('change:position', function(cell) {
+            if (cell.id in iconRegistry) {
+              const newPos = cell.position();
+              // Find icon container, then search within it for the specific icon
+              const iconContainer = self.paper.svg.querySelector('[data-icons-container]') ||
+                                  self.paper.svg.querySelector('.joint-cells');
+              if (iconContainer) {
+                const iconElement = iconContainer.querySelector(`[data-icon="${cell.id}"]`);
+                if (iconElement) {
+                  // Position at top-left corner, scaled to 2/3 size
+                  iconElement.setAttribute('transform',
+                    `translate(${newPos.x - 8}, ${newPos.y - 8}) scale(0.667)`);
+                }
+              }
+            }
+          });
+
+          // IMPLEMENTATION REQUIRED: Group Container Resizing
+          // After adding all cells to graph, implement resize handlers:
+          // 1. Create groupIds array and populate with group cell IDs during creation
+          // 2. Add mousedown listener on paper.svg with capture phase to detect resize handle
+          // 3. Add mousemove listener on document to track resizing
+          // 4. Add mouseup listener on document to end resizing
+          // 5. Add mousemove listener on paper.svg to update cursor based on position
+          // See production file aws-architecture-production-mogecheck-2025-11-15.html for reference
+          // and SKILL.md "Group Container Resizing" section for implementation details
+
+          console.log('JointJS initialized successfully');
+        } catch (error) {
+          console.error('Failed to initialize JointJS:', error);
+          this.showError('Failed to initialize diagram');
+        }
+      },
+
+      /**
+       * Bind UI event handlers
+       */
+      bindEventHandlers: function() {
+        // Zoom controls
+        document.getElementById('zoom-in-btn').addEventListener('click', () => this.zoomIn());
+        document.getElementById('zoom-out-btn').addEventListener('click', () => this.zoomOut());
+        document.getElementById('fit-view-btn').addEventListener('click', () => this.fitToView());
+        document.getElementById('download-btn').addEventListener('click', () => this.downloadDiagram());
+
+        // Paper events
+        this.paper.on('element:pointerenter', (cellView) => this.showTooltip(cellView));
+        this.paper.on('element:pointerleave', () => this.hideTooltip());
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => this.handleKeyboard(e));
+      },
+
+      /**
+       * Show loading indicator
+       */
+      showLoading: function() {
+        document.getElementById('loading').style.display = 'flex';
+      },
+
+      /**
+       * Hide loading indicator
+       */
+      hideLoading: function() {
+        document.getElementById('loading').style.display = 'none';
+      },
+
+      /**
+       * Show error message
+       */
+      showError: function(message) {
+        alert('Error: ' + message);
+        console.error(message);
+      },
+
+      /**
+       * Zoom In
+       */
+      zoomIn: function() {
+        const currentScale = this.paper.scale().sx;
+        this.paper.scale(Math.min(currentScale + 0.2, 3), Math.min(currentScale + 0.2, 3));
+      },
+
+      /**
+       * Zoom Out
+       */
+      zoomOut: function() {
+        const currentScale = this.paper.scale().sx;
+        this.paper.scale(Math.max(currentScale - 0.2, 0.5), Math.max(currentScale - 0.2, 0.5));
+      },
+
+      /**
+       * Fit diagram to view
+       */
+      fitToView: function() {
+        if (this.graph.getCells().length === 0) return;
+        this.paper.zoomToFit({
+          padding: 20,
+          minScale: 0.5,
+          maxScale: 3,
+        });
+      },
+
+      /**
+       * Download diagram as PNG
+       */
+      downloadDiagram: function() {
+        try {
+          const bbox = this.paper.getContentBBox();
+          const canvas = this.paper.toImage(bbox);
+
+          if (!canvas) {
+            this.showError('Failed to generate image');
+            return;
+          }
+
+          const link = document.createElement('a');
+          link.href = canvas;
+          link.download = `aws-architecture-${new Date().toISOString().split('T')[0]}.png`;
+          link.click();
+        } catch (error) {
+          this.showError('Failed to download diagram: ' + error.message);
+        }
+      },
+
+      /**
+       * Show tooltip on hover
+       */
+      showTooltip: function(cellView) {
+        // Implementation for tooltip
+        // This will be enhanced in the skill implementation
+      },
+
+      /**
+       * Hide tooltip
+       */
+      hideTooltip: function() {
+        // Implementation for tooltip
+      },
+
+      /**
+       * Handle keyboard shortcuts
+       */
+      handleKeyboard: function(e) {
+        if (e.ctrlKey || e.metaKey) {
+          switch (e.key) {
+            case '+':
+            case '=':
+              e.preventDefault();
+              this.zoomIn();
+              break;
+            case '-':
+              e.preventDefault();
+              this.zoomOut();
+              break;
+            case '0':
+              e.preventDefault();
+              this.fitToView();
+              break;
+          }
+        }
+      },
+
+      /**
+       * Create a category group container
+       * Container groups nest service components inside them
+       *
+       * INTERACTIVE RESIZING:
+       * - Group containers can be resized by users by dragging the bottom-right corner
+       * - Implement by:
+       *   1. Create groupIds array at diagram initialization
+       *   2. Push each group's ID to groupIds array when creating: groupIds.push(groupId)
+       *   3. Add mousedown listener on paper.svg to detect resize handle clicks
+       *   4. Add mousemove listener to document to track resizing
+       *   5. Add mouseup listener to document to end resizing
+       *   6. Update cursor to 'nwse-resize' when hovering over bottom-right corner
+       *   See SKILL.md "Group Container Resizing" for full implementation details
+       */
+      createCategoryGroup: function(name, x, y, width, height, color = '#f9fafb') {
+        // Placeholder for category group creation
+        // Implementation to be added in skill
+        //
+        // CRITICAL: When embedding service components into group container:
+        // Use PARENT.embed(CHILD) order (parent group embeds child services):
+        //   ✅ groupContainer.embed(serviceComponent)
+        //   ✅ groupContainer.embed(anotherService)
+        // NOT child.embed(parent) - this causes "Embedding of already embedded cells" error
+        //   ❌ serviceComponent.embed(groupContainer)  // WRONG ORDER
+        //
+        // IMPORTANT: After creating each group, add its ID to tracking array:
+        //   groupIds.push(groupId)
+
+        return {
+          id: `category-${name}`,
+          name: name,
+          x: x,
+          y: y,
+          width: width,
+          height: height,
+          color: color,
+        };
+      },
+
+      /**
+       * Create a service component with embedded AWS icon
+       * CRITICAL: SVG icons MUST be embedded directly as SVG content, NOT base64
+       *
+       * ICON FILE LOOKUP REQUIREMENT:
+       * Actual icon filenames DON'T always match service names.
+       * Examples of mismatches:
+       * - Service "ECS" → File: "Arch_Amazon-Elastic-Container-Service_48.svg"
+       * - Service "S3" → File: "Arch_Amazon-Simple-Storage-Service_48.svg"
+       * - Service "ElastiCache" → File: "Arch_Amazon-ElastiCache_48.svg" (but in Database folder, not App-Integration)
+       * - Service "RDS" → File: "Arch_Amazon-RDS_48.svg"
+       *
+       * MUST-DO: Implement icon file lookup algorithm:
+       * 1. Search assets/Architecture-Service-Icons_02072025/[Category]/48/ directory
+       * 2. For each service, try multiple name patterns:
+       *    - Exact match: "Arch_[ServiceName]_48.svg"
+       *    - Partial match: Search files containing key keywords
+       *      - "ECS" → search for "Elastic-Container-Service"
+       *      - "S3" → search for "Simple-Storage-Service"
+       *      - "RDS" → search for "Amazon-RDS"
+       *      - "ElastiCache" → search for "ElastiCache"
+       * 3. If not found in expected category, search ALL categories
+       * 4. If still not found, use generic default icon
+       * 5. Cache results to avoid repeated lookups
+       *
+       * ICON EMBEDDING METHOD:
+       * ✅ CORRECT: Load SVG file content and embed directly as SVG element
+       *   1. Read SVG file: ./assets/Architecture-Service-Icons_02072025/[Category]/48/Arch_[Service]_48.svg
+       *   2. Parse SVG content
+       *   3. Embed as <svg>...</svg> within component position (x+8, y+8, width:48, height:48)
+       *
+       * ❌ WRONG: Do NOT use Base64 encoding or data URIs
+       *   - Base64 data URIs may not render properly with complex SVG content
+       *   - Direct SVG embedding ensures full visual fidelity
+       *
+       * IMPLEMENTATION EXAMPLE (JointJS with SVG embedding):
+       * 1. Create parent rectangle for container
+       * 2. Add SVG content as foreignObject or direct SVG element
+       * 3. Position icon at (x+8, y+8) with 48×48 size
+       * 4. Add text labels below icon using TextBlock elements
+       * 5. Use parent.embed(child) to nest elements
+       */
+      createServiceComponent: function(name, category, x, y, icon = null) {
+        // Placeholder for service component creation
+        // Implementation to be added in skill
+        //
+        // REQUIREMENT: Each service component MUST:
+        // 1. Generate unique ID from component name
+        //    - Example: 'AWS WAF' → 'component-aws-waf'
+        //    - id = 'component-' + name.replace(/\s+/g, '-').toLowerCase()
+        // 2. Use white background (#ffffff) with colored border only
+        // 3. Display AWS icon (48x48px) as direct SVG CONTENT (NOT base64)
+        //    - Register icon in iconRegistry: iconRegistry[id] = { svg, x: (x-8), y: (y-8), name }
+        //    - Scale icons to 2/3 size: scale(0.667)
+        // 4. Position icon at top-left corner (x-8, y-8 offset for 48px icon scaled to ~32px)
+        // 5. Include service label below icon
+        // 6. Use category-based color for border:
+        //    - Compute: #ED7100
+        //    - Database: #E7157B
+        //    - Analytics: #01A88D
+        //    - Storage: #7AA116
+        //    - Security: #DD344C
+        //    - Integration: #C925D1
+        //    - Management: #8C4FFF
+        //
+        // CRITICAL: When embedding child elements (icon, labels) into parent container:
+        // Use PARENT.embed(CHILD) order:
+        //   ✅ rectComponent.embed(iconElement)
+        //   ✅ rectComponent.embed(labelElement)
+        // NOT child.embed(parent) - this causes "Embedding of already embedded cells" error
+        //   ❌ iconElement.embed(rectComponent)  // WRONG ORDER
+        //
+        // SVG ICON RENDERING:
+        // - Icons are registered in iconRegistry during component creation with (x-8, y-8) coordinates
+        // - addIconsToPaper() function creates [data-icons-container] and adds icons AFTER diagram rendering
+        // - Icons are rendered at top-left corner, scaled to 2/3 size
+        // - Icon transform pattern: `translate(${x-8}, ${y-8}) scale(0.667)`
+        // - Icons are added to SVG ROOT (not .joint-cells) so they DON'T get affected by diagram zoom/pan
+        // - CRITICAL: updateIconsTransform() is called on 'scale' and 'translate' events to keep icons synchronized
+        // - Drag&drop sync via graph.on('change:position') listener updates individual icon transforms
+        // - This architecture ensures icons:
+        //   1. Render on top of components
+        //   2. Stay synced with zoom/pan operations
+        //   3. Follow dragged components smoothly
+        //   4. Maintain correct coordinates at any zoom level
+
+        return {
+          id: `service-${name}`,
+          name: name,
+          category: category,
+          x: x,
+          y: y,
+          icon: icon,  // Should contain SVG string content, NOT base64
+        };
+      },
+
+      /**
+       * Create a connection/link between services
+       *
+       * LABEL PADDING REQUIREMENT:
+       * Link labels must have proper padding to avoid text being squeezed.
+       *
+       * When creating labels with JointJS, use labelBBox property:
+       * ```javascript
+       * const link = new joint.shapes.standard.Link({
+       *   labels: [{
+       *     attrs: {
+       *       text: {
+       *         text: 'Label Text',
+       *         fill: '#374151',
+       *         fontSize: 12
+       *       },
+       *       rect: {
+       *         fill: '#ffffff',
+       *         stroke: '#d1d5db',
+       *         rx: 4,
+       *         ry: 4
+       *       }
+       *     },
+       *     position: { distance: 0.5, offset: 0 },
+       *     size: { width: 'auto', height: 'auto' }  // ← Auto size for padding
+       *   }]
+       * });
+       * ```
+       *
+       * CRITICAL: Set proper labelBBox with padding:
+       * - Use labelBBox: { left: -30, top: -10, right: 30, bottom: 10 }
+       * - This ensures minimum 60px width, 20px height with proper margins
+       * - Prevents text from being cut off or squeezed
+       */
+      createConnection: function(sourceId, targetId, label = '') {
+        // Placeholder for connection creation
+        // Implementation to be added in skill
+        return {
+          source: sourceId,
+          target: targetId,
+          label: label,
+        };
+      },
+
+      /**
+       * Render diagram from data
+       */
+      render: function(data) {
+        try {
+          this.showLoading();
+
+          // Clear existing graph
+          this.graph.clear();
+
+          // TODO: Implement diagram rendering logic
+          // This will be populated by the skill
+
+          this.hideLoading();
+          this.fitToView();
+        } catch (error) {
+          this.showError('Failed to render diagram: ' + error.message);
+          this.hideLoading();
+        }
+      },
+    };
+
+    // Initialize when JointJS library is loaded
+    function waitForJointJSAndInit() {
+      if (typeof joint === 'undefined' || !joint.dia || !joint.shapes) {
+        // Retry after 100ms if JointJS is not fully loaded yet
+        setTimeout(waitForJointJSAndInit, 100);
+      } else {
+        // JointJS is fully loaded, initialize diagram
+        try {
+          AWSDiagram.init();
+        } catch (e) {
+          console.error('Failed to initialize AWS Diagram:', e);
+        }
+      }
+    }
+
+    // Use window.load instead of DOMContentLoaded for better reliability
+    window.addEventListener('load', () => {
+      waitForJointJSAndInit();
+    });
+  </script>
+</body>
+</html>

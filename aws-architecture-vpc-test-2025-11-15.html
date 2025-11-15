@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="AWS Architecture Diagram - VPC Test">
+  <title>AWS Architecture Diagram - VPC Test</title>
+
+  <!-- JointJS Dependencies (required for v3) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/backbone.js/1.4.0/backbone-min.js"></script>
+
+  <!-- JointJS Library (v3) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jointjs/3.6.2/joint.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jointjs/3.6.2/joint.min.css">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    /* ============================================
+       AWS Architecture Diagram Styles
+       ============================================ */
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background-color: #f9fafb;
+    }
+
+    #diagram-container {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: #ffffff;
+    }
+
+    /* Header */
+    #diagram-header {
+      padding: 16px 24px;
+      background-color: #ffffff;
+      border-bottom: 1px solid #e5e7eb;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    #diagram-title {
+      font-size: 24px;
+      font-weight: 600;
+      color: #1f2937;
+      margin: 0;
+    }
+
+    #diagram-controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    /* Canvas Area */
+    #canvas-wrapper {
+      flex: 1;
+      position: relative;
+      overflow: auto;
+      background-color: #ffffff;
+    }
+
+    #paper {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+
+    /* JointJS Custom Styles */
+    .joint-element {
+      pointer-events: auto;
+    }
+
+    .joint-element:hover {
+      filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+    }
+
+    /* Service Component Styles */
+    .service-component {
+      fill: #ffffff;
+      stroke: #d1d5db;
+      stroke-width: 2;
+      rx: 6;
+    }
+
+    .service-label {
+      font-size: 13px;
+      font-weight: 500;
+      text-anchor: middle;
+      fill: #1f2937;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    /* Connection/Link Styles */
+    .connection {
+      stroke: #6b7280;
+      stroke-width: 2;
+      fill: none;
+      pointer-events: none;
+    }
+
+    .connection-dashed {
+      stroke: #6b7280;
+      stroke-width: 2;
+      stroke-dasharray: 5, 5;
+      fill: none;
+      pointer-events: none;
+    }
+
+    .connection-marker {
+      fill: #6b7280;
+    }
+
+    /* Controls Panel */
+    .control-button {
+      padding: 8px 16px;
+      background-color: #f3f4f6;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      color: #374151;
+      transition: all 0.2s ease;
+    }
+
+    .control-button:hover {
+      background-color: #e5e7eb;
+      border-color: #9ca3af;
+    }
+
+    .control-button:active {
+      background-color: #d1d5db;
+    }
+
+    /* Footer */
+    #diagram-footer {
+      padding: 12px 24px;
+      background-color: #f9fafb;
+      border-top: 1px solid #e5e7eb;
+      font-size: 12px;
+      color: #6b7280;
+      text-align: right;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      #diagram-title {
+        font-size: 18px;
+      }
+
+      #diagram-header {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+      }
+
+      .service-label {
+        font-size: 11px;
+      }
+    }
+
+    @media print {
+      #diagram-header,
+      #diagram-footer,
+      #diagram-controls {
+        display: none;
+      }
+
+      #diagram-container {
+        background: #ffffff;
+      }
+
+      .joint-element:hover {
+        filter: none;
+      }
+    }
+
+    /* Group resize cursor */
+    .resize-cursor {
+      cursor: nwse-resize;
+    }
+  </style>
+</head>
+<body>
+  <div id="diagram-container">
+    <!-- Header -->
+    <div id="diagram-header">
+      <h1 id="diagram-title">AWS Architecture Diagram - VPC Test</h1>
+      <div id="diagram-controls">
+        <button class="control-button" id="zoom-in-btn" title="Zoom In">🔍+</button>
+        <button class="control-button" id="zoom-out-btn" title="Zoom Out">🔍−</button>
+        <button class="control-button" id="fit-view-btn" title="Fit to View">⬜ Fit</button>
+        <button class="control-button" id="download-btn" title="Download as PNG">⬇ Download</button>
+      </div>
+    </div>
+
+    <!-- Canvas -->
+    <div id="canvas-wrapper">
+      <div id="paper"></div>
+    </div>
+
+    <!-- Footer -->
+    <div id="diagram-footer">
+      <span id="diagram-info">AWS Architecture Diagram | Generated with Claude Code | 2025-11-15</span>
+    </div>
+  </div>
+
+  <!-- JointJS Diagram Script -->
+  <script>
+    // ============================================
+    // AWS Architecture Diagram - JointJS Setup
+    // ============================================
+
+    // Icon registry for tracking icon positions
+    const iconRegistry = {};
+
+    // Group IDs for resize functionality
+    const groupIds = [];
+
+    // Initialize JointJS namespace
+    const AWSDiagram = {
+      // Configuration
+      config: {
+        paperWidth: 2400,
+        paperHeight: 1600,
+        gridSize: 10,
+        snapToGrid: true,
+      },
+
+      // Graph and Paper instances
+      graph: null,
+      paper: null,
+
+      /**
+       * Initialize JointJS
+       */
+      init: function() {
+        try {
+          // Create graph
+          this.graph = new joint.dia.Graph({}, { cellNamespace: joint.shapes });
+
+          // Create paper
+          this.paper = new joint.dia.Paper({
+            el: document.getElementById('paper'),
+            model: this.graph,
+            width: this.config.paperWidth,
+            height: this.config.paperHeight,
+            gridSize: this.config.gridSize,
+            drawGrid: { name: 'mesh', args: { color: '#e5e7eb', thickness: 1 } },
+            background: { color: '#f9fafb' },
+            interactive: true,
+            cellViewNamespace: joint.shapes,
+            defaultLink: new joint.shapes.standard.Link(),
+            snapLinks: { radius: 20 },
+          });
+
+          // Function to update icon transforms based on paper's current zoom/pan state
+          const updateIconsTransform = () => {
+            const iconContainer = this.paper.svg.querySelector('[data-icons-container]');
+            if (!iconContainer) return;
+
+            const scale = this.paper.scale();
+            const translate = this.paper.translate();
+
+            // Apply the paper's transform to the icon container so icons follow zoom/pan
+            const transform = `translate(${translate.tx}, ${translate.ty}) scale(${scale.sx}, ${scale.sy})`;
+            iconContainer.setAttribute('transform', transform);
+          };
+
+          // Register zoom/pan event handlers for icon synchronization
+          this.paper.on('scale', updateIconsTransform);
+          this.paper.on('translate', updateIconsTransform);
+
+          // Bind event handlers
+          this.bindEventHandlers();
+
+          // Sync icon positions when components are dragged
+          const self = this;
+          this.graph.on('change:position', function(cell) {
+            if (cell.id in iconRegistry) {
+              const newPos = cell.position();
+              const iconContainer = self.paper.svg.querySelector('[data-icons-container]') ||
+                                  self.paper.svg.querySelector('.joint-cells');
+              if (iconContainer) {
+                const iconElement = iconContainer.querySelector(`[data-icon="${cell.id}"]`);
+                if (iconElement) {
+                  // Position at top-left corner, scaled to 2/3 size
+                  iconElement.setAttribute('transform',
+                    `translate(${newPos.x - 8}, ${newPos.y - 8}) scale(0.667)`);
+                }
+              }
+            }
+          });
+
+          // Group container resizing
+          this.setupGroupResizing();
+
+          console.log('JointJS initialized successfully');
+        } catch (error) {
+          console.error('Failed to initialize JointJS:', error);
+          this.showError('Failed to initialize diagram');
+        }
+      },
+
+      /**
+       * Setup group container resizing functionality
+       */
+      setupGroupResizing: function() {
+        const self = this;
+        let resizingGroup = null;
+        let resizeStartPos = null;
+        let resizeStartSize = null;
+
+        // Mousedown handler - detect resize handle
+        this.paper.svg.addEventListener('mousedown', function(evt) {
+          if (!evt.target) return;
+
+          const cellElement = evt.target.closest('.joint-element');
+          if (!cellElement) return;
+
+          const cellId = cellElement.getAttribute('model-id');
+          if (!groupIds.includes(cellId)) return;
+
+          const cell = self.graph.getCell(cellId);
+          if (!cell) return;
+
+          const bbox = cell.getBBox();
+          const mouseX = evt.clientX;
+          const mouseY = evt.clientY;
+
+          // Get paper coordinates
+          const paperRect = self.paper.el.getBoundingClientRect();
+          const scale = self.paper.scale();
+          const translate = self.paper.translate();
+
+          const paperX = (mouseX - paperRect.left - translate.tx) / scale.sx;
+          const paperY = (mouseY - paperRect.top - translate.ty) / scale.sy;
+
+          // Check if click is in bottom-right corner (within 20px)
+          if (paperX >= bbox.x + bbox.width - 20 &&
+              paperX <= bbox.x + bbox.width &&
+              paperY >= bbox.y + bbox.height - 20 &&
+              paperY <= bbox.y + bbox.height) {
+
+            resizingGroup = cell;
+            resizeStartPos = { x: paperX, y: paperY };
+            resizeStartSize = { width: bbox.width, height: bbox.height };
+            evt.preventDefault();
+            evt.stopPropagation();
+          }
+        }, true);
+
+        // Mousemove handler - track resizing
+        document.addEventListener('mousemove', function(evt) {
+          if (!resizingGroup) return;
+
+          const paperRect = self.paper.el.getBoundingClientRect();
+          const scale = self.paper.scale();
+          const translate = self.paper.translate();
+
+          const paperX = (evt.clientX - paperRect.left - translate.tx) / scale.sx;
+          const paperY = (evt.clientY - paperRect.top - translate.ty) / scale.sy;
+
+          const deltaX = paperX - resizeStartPos.x;
+          const deltaY = paperY - resizeStartPos.y;
+
+          const newWidth = Math.max(200, resizeStartSize.width + deltaX);
+          const newHeight = Math.max(150, resizeStartSize.height + deltaY);
+
+          resizingGroup.resize(newWidth, newHeight);
+        });
+
+        // Mouseup handler - end resizing
+        document.addEventListener('mouseup', function() {
+          resizingGroup = null;
+          resizeStartPos = null;
+          resizeStartSize = null;
+        });
+
+        // Update cursor on hover
+        this.paper.svg.addEventListener('mousemove', function(evt) {
+          if (resizingGroup) return;
+
+          const cellElement = evt.target.closest('.joint-element');
+          if (!cellElement) {
+            self.paper.el.style.cursor = 'default';
+            return;
+          }
+
+          const cellId = cellElement.getAttribute('model-id');
+          if (!groupIds.includes(cellId)) {
+            self.paper.el.style.cursor = 'default';
+            return;
+          }
+
+          const cell = self.graph.getCell(cellId);
+          if (!cell) return;
+
+          const bbox = cell.getBBox();
+          const paperRect = self.paper.el.getBoundingClientRect();
+          const scale = self.paper.scale();
+          const translate = self.paper.translate();
+
+          const paperX = (evt.clientX - paperRect.left - translate.tx) / scale.sx;
+          const paperY = (evt.clientY - paperRect.top - translate.ty) / scale.sy;
+
+          // Check if hovering over bottom-right corner
+          if (paperX >= bbox.x + bbox.width - 20 &&
+              paperX <= bbox.x + bbox.width &&
+              paperY >= bbox.y + bbox.height - 20 &&
+              paperY <= bbox.y + bbox.height) {
+            self.paper.el.style.cursor = 'nwse-resize';
+          } else {
+            self.paper.el.style.cursor = 'default';
+          }
+        });
+      },
+
+      /**
+       * Bind UI event handlers
+       */
+      bindEventHandlers: function() {
+        // Zoom controls
+        document.getElementById('zoom-in-btn').addEventListener('click', () => this.zoomIn());
+        document.getElementById('zoom-out-btn').addEventListener('click', () => this.zoomOut());
+        document.getElementById('fit-view-btn').addEventListener('click', () => this.fitToView());
+        document.getElementById('download-btn').addEventListener('click', () => this.downloadDiagram());
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => this.handleKeyboard(e));
+      },
+
+      /**
+       * Show error message
+       */
+      showError: function(message) {
+        alert('Error: ' + message);
+        console.error(message);
+      },
+
+      /**
+       * Zoom In
+       */
+      zoomIn: function() {
+        const currentScale = this.paper.scale().sx;
+        this.paper.scale(Math.min(currentScale + 0.2, 3), Math.min(currentScale + 0.2, 3));
+      },
+
+      /**
+       * Zoom Out
+       */
+      zoomOut: function() {
+        const currentScale = this.paper.scale().sx;
+        this.paper.scale(Math.max(currentScale - 0.2, 0.5), Math.max(currentScale - 0.2, 0.5));
+      },
+
+      /**
+       * Fit diagram to view
+       */
+      fitToView: function() {
+        if (this.graph.getCells().length === 0) return;
+        this.paper.scaleContentToFit({
+          padding: 40,
+          minScale: 0.3,
+          maxScale: 2,
+        });
+      },
+
+      /**
+       * Download diagram as PNG
+       */
+      downloadDiagram: function() {
+        try {
+          this.paper.toPNG((dataURL) => {
+            const link = document.createElement('a');
+            link.href = dataURL;
+            link.download = `aws-architecture-vpc-test-${new Date().toISOString().split('T')[0]}.png`;
+            link.click();
+          }, {
+            padding: 20,
+            backgroundColor: '#ffffff'
+          });
+        } catch (error) {
+          this.showError('Failed to download diagram: ' + error.message);
+        }
+      },
+
+      /**
+       * Handle keyboard shortcuts
+       */
+      handleKeyboard: function(e) {
+        if (e.ctrlKey || e.metaKey) {
+          switch (e.key) {
+            case '+':
+            case '=':
+              e.preventDefault();
+              this.zoomIn();
+              break;
+            case '-':
+              e.preventDefault();
+              this.zoomOut();
+              break;
+            case '0':
+              e.preventDefault();
+              this.fitToView();
+              break;
+          }
+        }
+      },
+
+      /**
+       * Render diagram from data
+       */
+      render: function() {
+        try {
+          // Clear existing graph
+          this.graph.clear();
+
+          // SVG icon content (embedded directly)
+          const icons = {
+            elb: `<svg width="48px" height="48px" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><g fill="none" fill-rule="evenodd"><g fill="#8C4FFF"><rect width="64" height="64"></rect></g><path d="M23.5,42 C17.71,42 13,37.29 13,31.5 C13,25.71 17.71,21 23.5,21 C29.29,21 34,25.71 34,31.5 C34,37.29 29.29,42 23.5,42 M48,48 C48,49.654 46.654,51 45,51 C43.346,51 42,49.654 42,48 C42,46.346 43.346,45 45,45 C46.654,45 48,46.346 48,48 M45,13 C46.654,13 48,14.346 48,16 C48,17.654 46.654,19 45,19 C43.346,19 42,17.654 42,16 C42,14.346 43.346,13 45,13 M48,29 C49.654,29 51,30.346 51,32 C51,33.654 49.654,35 48,35 C46.346,35 45,33.654 45,32 C45,30.346 46.346,29 48,29 M35.901,33 L43.102,33 C43.565,35.279 45.586,37 48,37 C50.757,37 53,34.757 53,32 C53,29.243 50.757,27 48,27 C45.586,27 43.565,28.721 43.102,31 L35.975,31 C35.916,29.541 35.614,28.146 35.096,26.856 L42.799,20.467 C43.466,20.797 44.206,21 45,21 C47.757,21 50,18.757 50,16 C50,13.243 47.757,11 45,11 C42.243,11 40,13.243 40,16 C40,17.224 40.459,18.331 41.191,19.201 L34.172,25.024 C31.977,21.42 28.021,19 23.5,19 C16.607,19 11,24.607 11,31.5 C11,38.393 16.607,44 23.5,44 C27.743,44 31.493,41.871 33.754,38.629 L41.191,44.799 C40.459,45.669 40,46.776 40,48 C40,50.757 42.243,53 45,53 C47.757,53 50,50.757 50,48 C50,45.243 47.757,43 45,43 C44.206,43 43.466,43.203 42.799,43.533 L34.77,36.873 C35.344,35.673 35.736,34.373 35.901,33" fill="#FFFFFF"></path></g></svg>`,
+            ec2: `<svg width="48px" height="48px" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><g fill="none" fill-rule="evenodd"><g fill="#ED7100"><rect width="64" height="64"></rect></g><path d="M22,41 L41,41 L41,23 L22,23 L22,41 Z M43,23 L46,23 L46,25 L43,25 L43,27 L46,27 L46,29 L43,29 L43,31 L46,31 L46,33 L43,33 L43,36 L46,36 L46,38 L43,38 L43,40 L46,40 L46,42 L42.863,42 C42.608,42.587 42.023,43 41.344,43 L41,43 L41,46 L39,46 L39,43 L37,43 L37,46 L35,46 L35,43 L33,43 L33,46 L31,46 L31,43 L29,43 L29,46 L27,46 L27,43 L24,43 L24,46 L22,46 L22,43 L21.656,43 C20.977,43 20.392,42.587 20.137,42 L18,42 L18,40 L20,40 L20,38 L18,38 L18,36 L20,36 L20,33 L18,33 L18,31 L20,31 L20,29 L18,29 L18,27 L20,27 L20,25 L18,25 L18,23 L20,23 L20,22.656 C20,21.743 20.743,21 21.656,21 L22,21 L22,18 L24,18 L24,21 L27,21 L27,18 L29,18 L29,21 L31,21 L31,18 L33,18 L33,21 L35,21 L35,18 L37,18 L37,21 L39,21 L39,18 L41,18 L41,21 L41.344,21 C42.257,21 43,21.743 43,22.656 L43,23 Z M32,52 L12,52 L12,32 L16,32 L16,30 L11.843,30 C10.826,30 10,30.827 10,31.843 L10,52.157 C10,53.173 10.826,54 11.843,54 L32.157,54 C33.174,54 34,53.173 34,52.157 L34,48 L32,48 L32,52 Z M54,11.843 L54,32.157 C54,33.173 53.174,34 52.157,34 L48,34 L48,32 L52,32 L52,12 L32,12 L32,16 L30,16 L30,11.843 C30,10.827 30.826,10 31.843,10 L52.157,10 C53.174,10 54,10.827 54,11.843 L54,11.843 Z" fill="#FFFFFF"></path></g></svg>`,
+            rds: `<svg width="48px" height="48px" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><g fill="none" fill-rule="evenodd"><g fill="#C925D1"><rect width="64" height="64"></rect></g><path d="M54,11 L54,19 L52,19 L52,13.414 L45.707,19.707 L44.293,18.293 L50.586,12 L45.125,12 L45.125,10 L53,10 C53.553,10 54,10.448 54,11 L54,11 Z M12,18.875 L10,18.875 L10,11 C10,10.448 10.447,10 11,10 L19,10 L19,12 L13.414,12 L19.707,18.293 L18.293,19.707 L12,13.414 L12,18.875 Z M19.707,45.707 L13.414,52 L18.875,52 L18.875,54 L11,54 C10.447,54 10,53.552 10,53 L10,45 L12,45 L12,50.586 L18.293,44.293 L19.707,45.707 Z M51.5,31.781 C51.5,29.352 48.634,26.932 43.833,25.307 L44.474,23.413 C50.21,25.354 53.5,28.404 53.5,31.781 C53.5,35.158 50.21,38.208 44.474,40.15 L43.833,38.255 C48.634,36.631 51.5,34.21 51.5,31.781 L51.5,31.781 Z M12.543,31.781 C12.543,34.105 15.224,36.46 19.715,38.081 L19.035,39.961 C13.639,38.014 10.543,35.033 10.543,31.781 C10.543,28.53 13.639,25.548 19.035,23.601 L19.715,25.482 C15.224,27.103 12.543,29.458 12.543,31.781 L12.543,31.781 Z M52,45.125 L54,45.125 L54,53 C54,53.552 53.553,54 53,54 L45,54 L45,52 L50.586,52 L44.293,45.707 L45.707,44.293 L52,50.586 L52,45.125 Z M32.022,31.402 C26.999,31.402 24.126,30.059 24,29.483 L24,26.257 C26.159,27.266 29.609,27.593 32,27.593 C34.391,27.593 37.841,27.266 40,26.257 L40,29.483 C39.894,30.057 37.051,31.402 32.022,31.402 L32.022,31.402 Z M32.022,37.13 C26.999,37.13 24.126,35.786 24,35.21 L24,31.956 C25.953,32.937 29.055,33.402 32.022,33.402 C34.973,33.402 38.055,32.938 40,31.96 L40,35.21 C39.894,35.785 37.052,37.13 32.022,37.13 L32.022,37.13 Z M32,42.268 C26.95,42.268 24.104,40.917 24,40.346 L24,37.683 C25.953,38.665 29.055,39.13 32.022,39.13 C34.973,39.13 38.055,38.666 40,37.687 L40,40.342 C39.896,40.917 37.05,42.268 32,42.268 L32,42.268 Z M32,22.193 C36.971,22.193 39.642,23.37 39.982,23.894 C39.642,24.417 36.971,25.593 32,25.593 C26.909,25.593 24.233,24.361 24,23.949 L24,23.93 C24.233,23.426 26.909,22.193 32,22.193 L32,22.193 Z M32,20.193 C28.286,20.193 22,20.973 22,23.894 L22,40.346 C22,43.041 27.184,44.268 32,44.268 C36.816,44.268 42,43.041 42,40.346 L42,23.894 C42,20.973 35.714,20.193 32,20.193 L32,20.193 Z" fill="#FFFFFF"></path></g></svg>`,
+            s3: `<svg width="48px" height="48px" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><g fill="none" fill-rule="evenodd"><g fill="#7AA116"><rect width="64" height="64"></rect></g><g transform="translate(10.999800, 10.000200)" fill="#FFFFFF"><path d="M36.759,23.948 L36.993,22.131 C39.166,23.385 39.842,24.121 40.037,24.424 C39.713,24.485 38.832,24.509 36.759,23.948 L36.759,23.948 Z M19.5,11 C9.125,11 2.382,8.488 2,6.696 L2,6.511 C2.349,5.392 8.14,2 19.5,2 C30.84,2 36.632,5.381 37,6.505 L37,6.616 C36.724,8.446 29.961,11 19.5,11 L19.5,11 Z M34.818,23.362 C30.053,21.797 23.912,18.979 21.594,17.888 C21.535,16.786 20.628,15.906 19.512,15.906 C18.358,15.906 17.418,16.845 17.418,18 C17.418,19.154 18.358,20.094 19.512,20.094 C19.969,20.094 20.389,19.942 20.733,19.693 C23.132,20.822 29.619,23.798 34.558,25.38 L32.837,38.724 C32.583,40.352 27.919,42 19.497,42 C11.072,42 6.405,40.352 6.155,38.751 L2.435,9.814 C5.945,11.915 12.749,13 19.5,13 C26.25,13 33.054,11.915 36.565,9.815 L34.818,23.362 Z M39,6.5 C39,3.431 30.661,0 19.5,0 C8.339,0 -3.55271368e-15,3.431 -3.55271368e-15,6.5 L-3.55271368e-15,7.043 L4.174,39.033 C4.875,43.516 15.123,44 19.497,44 C23.869,44 34.113,43.516 34.818,39.007 L36.501,25.947 C37.778,26.279 38.812,26.456 39.616,26.455 C40.606,26.455 41.273,26.203 41.697,25.697 C42.047,25.281 42.185,24.756 42.085,24.221 C41.857,23 40.403,21.712 37.37,20.044 L37.27,19.989 L39,7.044 L39,6.5 Z"></path></g></g></svg>`
+          };
+
+          // Create AWS Cloud container
+          const awsCloud = new joint.shapes.standard.Rectangle({
+            position: { x: 100, y: 80 },
+            size: { width: 1400, height: 900 },
+            attrs: {
+              body: {
+                fill: '#ffffff',
+                stroke: '#232F3E',
+                strokeWidth: 3,
+                strokeDasharray: '10,5',
+                rx: 8,
+                ry: 8
+              },
+              label: {
+                text: 'AWS Cloud',
+                fill: '#232F3E',
+                fontSize: 18,
+                fontWeight: 'bold',
+                refX: '50%',
+                refY: 10,
+                textAnchor: 'middle',
+                textVerticalAnchor: 'top'
+              }
+            }
+          });
+          awsCloud.addTo(this.graph);
+          groupIds.push(awsCloud.id);
+
+          // Create VPC container
+          const vpc = new joint.shapes.standard.Rectangle({
+            position: { x: 150, y: 140 },
+            size: { width: 1300, height: 760 },
+            attrs: {
+              body: {
+                fill: '#f0fff4',
+                stroke: '#0a0',
+                strokeWidth: 2.5,
+                strokeDasharray: '8,4',
+                rx: 6,
+                ry: 6
+              },
+              label: {
+                text: 'VPC (vpc-sc1)',
+                fill: '#0a0',
+                fontSize: 16,
+                fontWeight: '600',
+                refX: '50%',
+                refY: 10,
+                textAnchor: 'middle',
+                textVerticalAnchor: 'top'
+              }
+            }
+          });
+          vpc.addTo(this.graph);
+          awsCloud.embed(vpc);
+          groupIds.push(vpc.id);
+
+          // Create subnet-1 (Public Subnet)
+          const subnet1 = new joint.shapes.standard.Rectangle({
+            position: { x: 200, y: 200 },
+            size: { width: 400, height: 300 },
+            attrs: {
+              body: {
+                fill: '#efe',
+                stroke: '#092',
+                strokeWidth: 1.5,
+                rx: 4,
+                ry: 4
+              },
+              label: {
+                text: 'subnet-1 (Public)',
+                fill: '#092',
+                fontSize: 14,
+                fontWeight: '600',
+                refX: '50%',
+                refY: 10,
+                textAnchor: 'middle',
+                textVerticalAnchor: 'top'
+              }
+            }
+          });
+          subnet1.addTo(this.graph);
+          vpc.embed(subnet1);
+          groupIds.push(subnet1.id);
+
+          // Create subnet-2 (Private Subnet)
+          const subnet2 = new joint.shapes.standard.Rectangle({
+            position: { x: 700, y: 200 },
+            size: { width: 400, height: 300 },
+            attrs: {
+              body: {
+                fill: '#def',
+                stroke: '#07b',
+                strokeWidth: 1.5,
+                rx: 4,
+                ry: 4
+              },
+              label: {
+                text: 'subnet-2 (Private)',
+                fill: '#07b',
+                fontSize: 14,
+                fontWeight: '600',
+                refX: '50%',
+                refY: 10,
+                textAnchor: 'middle',
+                textVerticalAnchor: 'top'
+              }
+            }
+          });
+          subnet2.addTo(this.graph);
+          vpc.embed(subnet2);
+          groupIds.push(subnet2.id);
+
+          // Create ELB (in subnet-1)
+          const elb = new joint.shapes.standard.Rectangle({
+            position: { x: 320, y: 280 },
+            size: { width: 160, height: 120 },
+            attrs: {
+              body: {
+                fill: '#ffffff',
+                stroke: '#8C4FFF',
+                strokeWidth: 2.5,
+                rx: 6,
+                ry: 6
+              },
+              label: {
+                text: 'ELB\nweb1',
+                fill: '#1f2937',
+                fontSize: 13,
+                fontWeight: '500',
+                refX: '50%',
+                refY: '75%',
+                textAnchor: 'middle',
+                textVerticalAnchor: 'middle'
+              }
+            }
+          });
+          elb.addTo(this.graph);
+          subnet1.embed(elb);
+
+          // Register ELB icon
+          iconRegistry[elb.id] = {
+            svg: icons.elb,
+            x: 320 - 8,
+            y: 280 - 8,
+            name: 'ELB'
+          };
+
+          // Create EC2 (in subnet-2)
+          const ec2 = new joint.shapes.standard.Rectangle({
+            position: { x: 820, y: 280 },
+            size: { width: 160, height: 120 },
+            attrs: {
+              body: {
+                fill: '#ffffff',
+                stroke: '#ED7100',
+                strokeWidth: 2.5,
+                rx: 6,
+                ry: 6
+              },
+              label: {
+                text: 'EC2\nweb1',
+                fill: '#1f2937',
+                fontSize: 13,
+                fontWeight: '500',
+                refX: '50%',
+                refY: '75%',
+                textAnchor: 'middle',
+                textVerticalAnchor: 'middle'
+              }
+            }
+          });
+          ec2.addTo(this.graph);
+          subnet2.embed(ec2);
+
+          // Register EC2 icon
+          iconRegistry[ec2.id] = {
+            svg: icons.ec2,
+            x: 820 - 8,
+            y: 280 - 8,
+            name: 'EC2'
+          };
+
+          // Create RDS (in VPC, outside subnets)
+          const rds = new joint.shapes.standard.Rectangle({
+            position: { x: 620, y: 600 },
+            size: { width: 160, height: 120 },
+            attrs: {
+              body: {
+                fill: '#ffffff',
+                stroke: '#C925D1',
+                strokeWidth: 2.5,
+                rx: 6,
+                ry: 6
+              },
+              label: {
+                text: 'RDS\ndb1',
+                fill: '#1f2937',
+                fontSize: 13,
+                fontWeight: '500',
+                refX: '50%',
+                refY: '75%',
+                textAnchor: 'middle',
+                textVerticalAnchor: 'middle'
+              }
+            }
+          });
+          rds.addTo(this.graph);
+          vpc.embed(rds);
+
+          // Register RDS icon
+          iconRegistry[rds.id] = {
+            svg: icons.rds,
+            x: 620 - 8,
+            y: 600 - 8,
+            name: 'RDS'
+          };
+
+          // Create S3 (outside VPC, but in AWS Cloud)
+          const s3 = new joint.shapes.standard.Rectangle({
+            position: { x: 1200, y: 600 },
+            size: { width: 160, height: 120 },
+            attrs: {
+              body: {
+                fill: '#ffffff',
+                stroke: '#7AA116',
+                strokeWidth: 2.5,
+                rx: 6,
+                ry: 6
+              },
+              label: {
+                text: 'S3\nxx.com',
+                fill: '#1f2937',
+                fontSize: 13,
+                fontWeight: '500',
+                refX: '50%',
+                refY: '75%',
+                textAnchor: 'middle',
+                textVerticalAnchor: 'middle'
+              }
+            }
+          });
+          s3.addTo(this.graph);
+          awsCloud.embed(s3);
+
+          // Register S3 icon
+          iconRegistry[s3.id] = {
+            svg: icons.s3,
+            x: 1200 - 8,
+            y: 600 - 8,
+            name: 'S3'
+          };
+
+          // Create User (external, outside AWS Cloud)
+          const user = new joint.shapes.standard.Rectangle({
+            position: { x: 50, y: 280 },
+            size: { width: 120, height: 80 },
+            attrs: {
+              body: {
+                fill: '#aaa',
+                stroke: '#fff',
+                strokeWidth: 2,
+                rx: 6,
+                ry: 6
+              },
+              label: {
+                text: 'User',
+                fill: '#ffffff',
+                fontSize: 14,
+                fontWeight: '600',
+                refX: '50%',
+                refY: '50%',
+                textAnchor: 'middle',
+                textVerticalAnchor: 'middle'
+              }
+            }
+          });
+          user.addTo(this.graph);
+
+          // Create connections with orthogonal (L-shaped) paths
+
+          // User → ELB
+          const linkUserToElb = new joint.shapes.standard.Link({
+            source: { id: user.id },
+            target: { id: elb.id },
+            attrs: {
+              line: {
+                stroke: '#6b7280',
+                strokeWidth: 2,
+                targetMarker: {
+                  type: 'path',
+                  d: 'M 10 -5 L 0 0 L 10 5 z',
+                  fill: '#6b7280'
+                }
+              }
+            },
+            router: { name: 'orthogonal' },
+            connector: { name: 'rounded' }
+          });
+          linkUserToElb.addTo(this.graph);
+
+          // ELB → EC2
+          const linkElbToEc2 = new joint.shapes.standard.Link({
+            source: { id: elb.id },
+            target: { id: ec2.id },
+            attrs: {
+              line: {
+                stroke: '#6b7280',
+                strokeWidth: 2,
+                targetMarker: {
+                  type: 'path',
+                  d: 'M 10 -5 L 0 0 L 10 5 z',
+                  fill: '#6b7280'
+                }
+              }
+            },
+            router: { name: 'orthogonal' },
+            connector: { name: 'rounded' }
+          });
+          linkElbToEc2.addTo(this.graph);
+
+          // EC2 → RDS
+          const linkEc2ToRds = new joint.shapes.standard.Link({
+            source: { id: ec2.id },
+            target: { id: rds.id },
+            attrs: {
+              line: {
+                stroke: '#6b7280',
+                strokeWidth: 2,
+                targetMarker: {
+                  type: 'path',
+                  d: 'M 10 -5 L 0 0 L 10 5 z',
+                  fill: '#6b7280'
+                }
+              }
+            },
+            router: { name: 'orthogonal' },
+            connector: { name: 'rounded' }
+          });
+          linkEc2ToRds.addTo(this.graph);
+
+          // RDS ↔ S3 (dashed line for backup/replication)
+          const linkRdsToS3 = new joint.shapes.standard.Link({
+            source: { id: rds.id },
+            target: { id: s3.id },
+            attrs: {
+              line: {
+                stroke: '#6b7280',
+                strokeWidth: 2,
+                strokeDasharray: '5,5',
+                targetMarker: {
+                  type: 'path',
+                  d: 'M 10 -5 L 0 0 L 10 5 z',
+                  fill: '#6b7280'
+                }
+              }
+            },
+            router: { name: 'orthogonal' },
+            connector: { name: 'rounded' }
+          });
+          linkRdsToS3.addTo(this.graph);
+
+          // Add icons to paper after diagram rendering
+          setTimeout(() => {
+            this.addIconsToPaper();
+          }, 100);
+
+          // Fit view
+          this.fitToView();
+
+          console.log('Diagram rendered successfully');
+        } catch (error) {
+          this.showError('Failed to render diagram: ' + error.message);
+          console.error(error);
+        }
+      },
+
+      /**
+       * Add SVG icons to paper
+       */
+      addIconsToPaper: function() {
+        try {
+          // Create icons container group
+          let iconsContainer = this.paper.svg.querySelector('[data-icons-container]');
+          if (!iconsContainer) {
+            iconsContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            iconsContainer.setAttribute('data-icons-container', 'true');
+            this.paper.svg.appendChild(iconsContainer);
+          }
+
+          // Add each icon
+          Object.keys(iconRegistry).forEach(cellId => {
+            const iconData = iconRegistry[cellId];
+
+            // Create a temporary div to parse SVG string
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = iconData.svg.trim();
+            const svgElement = tempDiv.querySelector('svg');
+
+            if (svgElement) {
+              // Create a group for this icon
+              const iconGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+              iconGroup.setAttribute('data-icon', cellId);
+              iconGroup.setAttribute('transform', `translate(${iconData.x}, ${iconData.y}) scale(0.667)`);
+              iconGroup.setAttribute('pointer-events', 'none');
+
+              // Clone all children from parsed SVG
+              Array.from(svgElement.children).forEach(child => {
+                iconGroup.appendChild(child.cloneNode(true));
+              });
+
+              iconsContainer.appendChild(iconGroup);
+            }
+          });
+
+          console.log('Icons added to paper successfully');
+        } catch (error) {
+          console.error('Failed to add icons to paper:', error);
+        }
+      },
+    };
+
+    // Initialize when JointJS library is loaded
+    function waitForJointJSAndInit() {
+      if (typeof joint === 'undefined' || !joint.dia || !joint.shapes) {
+        setTimeout(waitForJointJSAndInit, 100);
+      } else {
+        try {
+          AWSDiagram.init();
+          AWSDiagram.render();
+        } catch (e) {
+          console.error('Failed to initialize AWS Diagram:', e);
+        }
+      }
+    }
+
+    // Use window.load for better reliability
+    window.addEventListener('load', () => {
+      waitForJointJSAndInit();
+    });
+  </script>
+</body>
+</html>
