@@ -1,25 +1,25 @@
 # AWS Architecture Diagram Skill
 
-**Languages:** [日本語](README.md) | [English](README_en.md)
+**Languages:** [English](README.md) | [日本語](README_ja.md)
 
 ---
 
-Mermaidダイアグラムやテキスト記述からAWS Architecture Diagram（インタラクティブなHTML図）を生成するスキルです。
+A skill that generates AWS Architecture Diagrams (interactive HTML diagrams) from Mermaid diagrams or text descriptions.
 
-<img width="1183" height="840" alt="スクリーンショット 2025-11-15 午前10 28 57" src="https://github.com/user-attachments/assets/89160cfc-e037-41c9-b03e-032741531ab3" />
+<img width="1183" height="840" alt="Screenshot 2025-11-15 10:28:57 AM" src="https://github.com/user-attachments/assets/89160cfc-e037-41c9-b03e-032741531ab3" />
 
 
-## 🚀 クイックスタート
+## 🚀 Quick Start
 
-### ステップ 1: AWS アイコンのセットアップ
+### Step 1: AWS Icons Setup
 
-このスキルを使用する前に、AWS の公開しているアーキテクチャアイコンをダウンロードして配置する必要があります。
+Before using this skill, you need to download and organize the AWS architecture icons published by AWS.
 
-**AWS アーキテクチャアイコンのダウンロード：**
+**Download AWS Architecture Icons:**
 
-1. AWS 公式サイトにアクセス：[AWS Architecture Icons](http://aws.amazon.com/architecture/icons/)
-2. 「Architecture icons」と「Architecture group icons」をダウンロード
-3. ダウンロードしたファイルを以下のディレクトリに展開：
+1. Visit AWS official site: [AWS Architecture Icons](http://aws.amazon.com/architecture/icons/)
+2. Download "Architecture icons" and "Architecture group icons"
+3. Extract the downloaded files to the following directory:
 
 `.claude/skills/aws-architecture-diagram/assets`
 - Architecture-Group-Icons
@@ -27,9 +27,9 @@ Mermaidダイアグラムやテキスト記述からAWS Architecture Diagram（�
 - Category-Icons
 - Resource-Icons
 
-**ファイル構成の例：**
+**Example File Structure:**
 
-各カテゴリフォルダ（例：`Arch_Compute`）内には、以下のような構造で 48px の SVG ファイルが格納されます：
+Each category folder (e.g., `Arch_Compute`) contains 48px SVG files with the following structure:
 
 ```
 Arch_Compute/48/
@@ -37,14 +37,14 @@ Arch_Compute/48/
 ├── Arch_Amazon-EC2-Auto-Scaling_48.svg
 ├── Arch_Amazon-Elastic-Container-Service_48.svg
 ├── Arch_AWS-Lambda_48.svg
-└── ... (その他のサービス)
+└── ... (other services)
 ```
 
-### ステップ 2: スキルの使用
+### Step 2: Using the Skill
 
-スキルを起動して、Mermaid または テキスト記述でアーキテクチャを定義します。
+Activate the skill and define your architecture using Mermaid or text descriptions.
 
-**例：**
+**Example:**
 ```mermaid
 flowchart LR
   User[User] --> ELB[ELB]
@@ -53,21 +53,21 @@ flowchart LR
   RDS -.-> S3[S3]
 ```
 
-## 📋 実装内容の詳細
+## 📋 Implementation Details
 
-### 1. アイコン埋め込み方式
+### 1. Icon Embedding Method
 
-**従来の方式（❌ DEPRECATED）:**
-- Base64 エンコードされたデータ URI
-- ファイルサイズ増加
-- 視覚的損失
+**Legacy Method (❌ DEPRECATED):**
+- Base64-encoded data URIs
+- Increased file size
+- Visual quality loss
 
-**現在の方式（✅ 採用）:**
-- SVG コンテンツを直接 HTML に埋め込み
-- フルビジュアルフィデリティ
-- スケーラブル
+**Current Method (✅ ADOPTED):**
+- SVG content embedded directly in HTML
+- Full visual fidelity
+- Scalable
 
-**実装例：**
+**Implementation Example:**
 ```javascript
 const AWS_ICONS = {
   'EC2': '<svg width="48" height="48" viewBox="0 0 64 64" xmlns="...">...</svg>',
@@ -75,38 +75,38 @@ const AWS_ICONS = {
   'S3': '<svg width="48" height="48" viewBox="0 0 64 64" xmlns="...">...</svg>'
 };
 
-// アイコン登録
+// Icon registration
 iconRegistry[componentId] = {
   svg: AWS_ICONS['EC2'],
-  x: posX - 8,  // 左上に配置（オフセット: -8）
+  x: posX - 8,  // Top-left placement (offset: -8)
   y: posY - 8,
   name: 'EC2'
 };
 ```
 
-### 2. アイコン位置調整
+### 2. Icon Position Adjustment
 
-**要件：**
-- アイコンはコンポーネント枠線に重なるように左上配置
-- スケール：2/3 サイズ（48px → 約32px）
-- オフセット：`x - 8, y - 8`
+**Requirements:**
+- Icons positioned at top-left, slightly overlapping the component border
+- Scale: 2/3 size (48px → ~32px)
+- Offset: `x - 8, y - 8`
 
-**なぜこのオフセット値？**
-- 48px アイコンを 2/3 にスケール → 32px
-- 16px オーバーハング（左上に半分重なる）
-- 8px のオフセット = 16px の半分
+**Why this offset value?**
+- 48px icon scaled to 2/3 = ~32px display size
+- 16px overhang (50% overlap with border)
+- 8px offset = half of 16px overhang
 
-### 3. ドラッグ&ドロップ機能
+### 3. Drag & Drop Functionality
 
-**実装：**
+**Implementation:**
 ```javascript
-// コンポーネント位置変更時のリスナー
+// Listener for component position changes
 graph.on('change:position', function(cell) {
   if (cell.id in iconRegistry) {
     const newPos = cell.position();
     const iconElement = iconContainer.querySelector(`[data-icon="${cell.id}"]`);
     if (iconElement) {
-      // ドラッグ時もアイコンの相対位置を維持
+      // Maintain icon's relative position during drag
       iconElement.setAttribute('transform',
         `translate(${newPos.x - 8}, ${newPos.y - 8}) scale(0.667)`);
     }
@@ -114,19 +114,19 @@ graph.on('change:position', function(cell) {
 });
 ```
 
-**オフセット値の統一性が重要：**
-- 登録時のオフセット：`x - 8, y - 8`
-- ドラッグ更新時：`newPos.x - 8, newPos.y - 8`
-- **両者が異なるとアイコンがドラッグ時に離れていく**（重大バグ）
+**Offset Value Consistency is Critical:**
+- Registration offset: `x - 8, y - 8`
+- Drag update offset: `newPos.x - 8, newPos.y - 8`
+- **If offsets differ, icons will drift away during dragging** (critical bug)
 
-### 4. ズーム・パン同期機能
+### 4. Zoom & Pan Synchronization
 
-**問題：**
-- ズーム/パン時にアイコンが固定されて見える
+**Problem:**
+- Icons appear fixed during zoom/pan operations
 
-**解決：**
+**Solution:**
 ```javascript
-// アイコンコンテナ用の transform 更新関数
+// Transform update function for icon container
 function updateIconsTransform() {
   const iconContainer = paper.svg.querySelector('[data-icons-container]');
   if (!iconContainer) return;
@@ -134,47 +134,47 @@ function updateIconsTransform() {
   const scale = paper.scale();
   const translate = paper.translate();
 
-  // Paper の現在のズーム・パン状態を反映
+  // Reflect current Paper zoom/pan state
   const transform = `translate(${translate.tx}, ${translate.ty}) scale(${scale.sx}, ${scale.sy})`;
   iconContainer.setAttribute('transform', transform);
 }
 
-// ズーム・パンイベント時に実行
+// Execute on zoom/pan events
 paper.on('scale', updateIconsTransform);
 paper.on('translate', updateIconsTransform);
 ```
 
-### 5. グループのリサイズ機能
+### 5. Group Container Resizing
 
-**実装：**
+**Implementation:**
 ```javascript
-// グループ ID の追跡
+// Track group IDs
 const groupIds = [];
 
-// グループ作成時
+// When creating a group
 const awsCloud = createGroup('aws-cloud', 'AWS Cloud', 50, 50, 1400, 900);
 elements.push(awsCloud);
-groupIds.push(awsCloud.id);  // ID を登録
+groupIds.push(awsCloud.id);  // Register ID
 
-// リサイズハンドラーの設定
+// Set up resize handler
 paper.svg.addEventListener('mousedown', function(evt) {
-  // グループの右下隅 30x30px をリサイズハンドルとして検出
+  // Detect 30x30px resize handle at bottom-right corner
   for (let i = 0; i < groupIds.length; i++) {
     const groupCell = graph.getCell(groupIds[i]);
     const pos = groupCell.position();
     const size = groupCell.size();
 
-    // 座標変換（ズーム・パン対応）
+    // Coordinate transformation (zoom/pan aware)
     const scale = paper.scale().sx;
     const translate = paper.translate();
     const canvasX = (evt.clientX - svgBBox.left - translate.tx) / scale;
     const canvasY = (evt.clientY - svgBBox.top - translate.ty) / scale;
 
-    // リサイズハンドル内かチェック
+    // Check if in resize handle
     const handleSize = 30;
     if (canvasX >= pos.x + size.width - handleSize &&
         canvasY >= pos.y + size.height - handleSize) {
-      // リサイズ開始
+      // Start resizing
       isResizing = true;
       resizingGroup = groupCell;
     }
@@ -182,13 +182,13 @@ paper.svg.addEventListener('mousedown', function(evt) {
 }, true);
 ```
 
-**カーソル表示：**
+**Cursor Feedback:**
 ```javascript
-// リサイズハンドル上ではカーソルを変更
+// Change cursor when on resize handle
 paper.svg.addEventListener('mousemove', function(evt) {
   for (let i = 0; i < groupIds.length; i++) {
     const groupCell = graph.getCell(groupIds[i]);
-    // ... 座標計算 ...
+    // ... coordinate calculation ...
 
     if (isInHandle) {
       paper.svg.style.cursor = 'nwse-resize';  // ↙↗
@@ -199,63 +199,63 @@ paper.svg.addEventListener('mousemove', function(evt) {
 });
 ```
 
-## 🔧 トラブルシューティング
+## 🔧 Troubleshooting
 
-### アイコンがドラッグ時に離れていく
+### Icons Drift Away During Dragging
 
-**原因：** 登録時と更新時のオフセット値が異なっている
+**Cause:** Offset values differ between registration and drag update
 
-**解決：**
+**Solution:**
 ```javascript
-// ❌ 間違い
+// ❌ Incorrect
 iconRegistry[id] = { x: posX + 8, y: posY + 8, ... };
-// ドラッグ時
+// During drag
 iconElement.setAttribute('transform', `translate(${newPos.x - 8}, ...)`);
 
-// ✅ 正しい
+// ✅ Correct
 iconRegistry[id] = { x: posX - 8, y: posY - 8, ... };
-// ドラッグ時
+// During drag
 iconElement.setAttribute('transform', `translate(${newPos.x - 8}, ...)`);
 ```
 
-### アイコンが表示されない
+### Icons Not Displaying
 
-**原因：** `addIconsToPaper()` が実行される前にアイコンコンテナが見つからない
+**Cause:** `addIconsToPaper()` executed before icon container is found
 
-**解決：**
+**Solution:**
 ```javascript
-// 遅延実行で paper のレンダリングを待つ
+// Delayed execution to wait for Paper rendering
 setTimeout(() => {
   addIconsToPaper();
   updateIconsTransform();
 }, 100);
 ```
 
-### ズーム・パン時にアイコンが固定される
+### Icons Fixed During Zoom/Pan
 
-**原因：** `updateIconsTransform()` が実行されていない
+**Cause:** `updateIconsTransform()` not being executed
 
-**解決：**
+**Solution:**
 ```javascript
-// イベントリスナーの登録を確認
+// Verify event listeners are registered
 paper.on('scale', updateIconsTransform);
 paper.on('translate', updateIconsTransform);
 ```
 
-## 📊 アーキテクチャ仕様
+## 📊 Architecture Specifications
 
-### コンポーネント配置オフセット
+### Component Placement Offset
 
-| 要素 | 登録時 | ドラッグ更新時 | 説明 |
-|------|-------|--------------|------|
-| アイコン | `x - 8, y - 8` | `newPos.x - 8, newPos.y - 8` | 左上配置、枠線に重なる |
-| アイコンスケール | 0.667 (2/3) | 0.667 (2/3) | 48px → 32px |
-| グループハンドル | - | 30x30px | 右下隅のリサイズ領域 |
+| Element | Registration | Drag Update | Description |
+|---------|--------------|-------------|-------------|
+| Icon | `x - 8, y - 8` | `newPos.x - 8, newPos.y - 8` | Top-left, overlaps border |
+| Icon Scale | 0.667 (2/3) | 0.667 (2/3) | 48px → 32px |
+| Group Handle | - | 30x30px | Bottom-right resize area |
 
-### AWS サービスカテゴリと色
+### AWS Service Categories and Colors
 
-| カテゴリ | HEX カラー | RGB |
-|---------|-----------|-----|
+| Category | HEX Color | RGB |
+|----------|-----------|-----|
 | Compute | #ED7100 | Smile (Orange) |
 | Database | #E7157B | Cosmos (Pink) |
 | Analytics | #01A88D | Orbit (Teal) |
@@ -266,110 +266,110 @@ paper.on('translate', updateIconsTransform);
 | Networking | #8C4FFF | Galaxy (Purple-Blue) |
 | External | #232F3E | Squid (Navy) |
 
-## 📚 ファイル構成
+## 📚 File Structure
 
 ```
 .claude/skills/aws-architecture-diagram/
-├── README.md                           # このファイル
-├── SKILL.md                            # スキル詳細ドキュメント
-├── REFERENCE.md                        # 技術リファレンス
+├── README.md                           # Japanese documentation
+├── SKILL.md                            # Skill details
+├── REFERENCE.md                        # Technical reference
 │
 ├── templates/
-│   └── diagram-template.html          # JointJS ベーステンプレート
+│   └── diagram-template.html          # JointJS base template
 │
 ├── assets/
-│   ├── Architecture-Service-Icons_02072025/    # AWS サービスアイコン
+│   ├── Architecture-Service-Icons_02072025/    # AWS service icons
 │   │   ├── Arch_Analytics/
 │   │   ├── Arch_Compute/
 │   │   ├── Arch_Database/
-│   │   └── ... (詳細は上記のセットアップセクション参照)
+│   │   └── ... (see setup section for details)
 │   │
-│   └── Architecture-Group-Icons_02072025/      # AWS グループアイコン
+│   └── Architecture-Group-Icons_02072025/      # AWS group icons
 │       ├── AWS-Cloud/
 │       ├── Region/
-│       └── ... (詳細は上記のセットアップセクション参照)
+│       └── ... (see setup section for details)
 │
-└── (生成されたダイアグラム HTML ファイル)
+└── (generated diagram HTML files)
 ```
 
-## 🎯 スキル実行フロー
+## 🎯 Skill Execution Flow
 
-1. **入力受け取り** → Mermaid / テキスト記述
-2. **解析** → AWS サービス、グループ、接続関係を識別
-3. **レイアウト設計** → カテゴリに基づいてコンポーネントを配置
-4. **HTML 生成** → テンプレートを使用して JointJS ベースの HTML を生成
-   - アイコン登録（`iconRegistry`）
-   - グループ作成（`groupIds` に登録）
-   - 接続線（矢印）作成
-   - イベントハンドラー設定
-5. **ファイル出力** → `aws-architecture-[日付].html`
+1. **Input Reception** → Mermaid / text description
+2. **Parsing** → Identify AWS services, groups, and connections
+3. **Layout Design** → Position components based on categories
+4. **HTML Generation** → Generate JointJS-based HTML using template
+   - Icon registration (`iconRegistry`)
+   - Group creation (register in `groupIds`)
+   - Connection lines (arrows) creation
+   - Event handler setup
+5. **File Output** → `aws-architecture-[date].html`
 
-## 🔍 デバッグモード
+## 🔍 Debug Mode
 
-生成された HTML ファイルで、ブラウザの開発者ツール（F12）を開いてコンソールを確認：
+In the generated HTML file, open browser developer tools (F12) and check the console:
 
 ```javascript
-// アイコン登録状態
+// Icon registry state
 console.log('Icon Registry:', iconRegistry);
 
-// グループ登録状態
+// Group registry state
 console.log('Group IDs:', groupIds);
 
-// ドラッグ時のログ
+// Drag operation log
 console.log('Updating icon position:', cellId, newPos.x, newPos.y);
 ```
 
-## 🚀 実装済み機能リスト
+## 🚀 Implemented Features List
 
-- ✅ アイコン埋め込み（SVG 直接）
-- ✅ ドラッグ&ドロップ（完全な座標追従）
-- ✅ ズーム・パン同期
-- ✅ グループのリサイズ
-- ✅ カーソルフィードバック（grab / nwse-resize）
-- ✅ アイコン位置調整（左上、枠線に重なる）
-- ✅ アイコンスケール（2/3 サイズ）
-- ✅ L 字型矢印（orthogonal routing）
-- ✅ グリッド背景
-- ✅ レスポンシブデザイン
-- ✅ キーボードショートカット（Ctrl + +/−/0）
-- ✅ SVG ダウンロード機能
+- ✅ Icon embedding (direct SVG)
+- ✅ Drag & drop (full coordinate following)
+- ✅ Zoom/pan synchronization
+- ✅ Group container resizing
+- ✅ Cursor feedback (grab / nwse-resize)
+- ✅ Icon position adjustment (top-left, border overlap)
+- ✅ Icon scaling (2/3 size)
+- ✅ L-shaped arrows (orthogonal routing)
+- ✅ Grid background
+- ✅ Responsive design
+- ✅ Keyboard shortcuts (Ctrl + +/−/0)
+- ✅ SVG download functionality
 
-## 📝 変更履歴
+## 📝 Change History
 
 ### 2025-11-15
 
-**追加:**
-- グループコンテナのリサイズ機能
-- アイコン位置の左上配置（`x - 8, y - 8`）
-- ドラッグ時のアイコン完全追従
-- ズーム・パン時のアイコン同期
+**Added:**
+- Group container resizing functionality
+- Icon top-left positioning (`x - 8, y - 8`)
+- Icon full coordinate following during drag
+- Icon synchronization during zoom/pan
 
-**修正:**
-- アイコンオフセット値の統一（登録時と更新時の一致）
-- ドラッグ時のアイコン離脱バグ修正
+**Fixed:**
+- Icon offset value unification (registration and update match)
+- Icon drift bug during dragging
 
-**ドキュメント更新:**
-- SKILL.md に新機能を記載
-- REFERENCE.md にアイコンマッピング表を追加
-- テンプレートに実装ガイドを追加
+**Documentation Updates:**
+- Added new features to SKILL.md
+- Added icon mapping table to REFERENCE.md
+- Added implementation guide to template
 
-## 🤝 貢献ガイド
+## 🤝 Contribution Guide
 
-このスキルを拡張する場合は、以下の点に注意してください：
+When extending this skill, note the following:
 
-1. **アイコンオフセット値の統一**
-   - 登録時：`x - 8, y - 8`
-   - ドラッグ更新時：`newPos.x - 8, newPos.y - 8`
-   - ズーム・パン対応：`paper.on('scale/translate')`
+1. **Icon Offset Value Unification**
+   - Registration: `x - 8, y - 8`
+   - Drag update: `newPos.x - 8, newPos.y - 8`
+   - Zoom/pan: `paper.on('scale/translate')`
 
-2. **グループ ID の登録**
-   - 新しいグループを作成したら必ず `groupIds.push(groupId)`
+2. **Group ID Registration**
+   - Always register new groups with `groupIds.push(groupId)`
 
-3. **アイコン検索アルゴリズム**
-   - REFERENCE.md の「Icon Lookup Algorithm」を参照
-   - サービス名とファイル名のマッピングに注意
+3. **Icon Lookup Algorithm**
+   - Refer to "Icon Lookup Algorithm" in REFERENCE.md
+   - Pay attention to service name to filename mapping
 
-## 📖 参考資料
+## 📖 References
 
 - [AWS Architecture Icons](http://aws.amazon.com/architecture/icons/)
 - [JointJS v3 Documentation](https://docs.jointjs.com/)
@@ -378,6 +378,13 @@ console.log('Updating icon position:', cellId, newPos.x, newPos.y);
 
 ---
 
-**最終更新：** 2025-11-15
-**テンプレートバージョン：** 1.0
-**スキル ステータス：** ✅ 本番環境対応
+**Last Updated:** 2025-11-15
+**Template Version:** 1.0
+**Skill Status:** ✅ Production Ready
+
+## 📖 Detailed Documentation
+
+For more detailed information about the skill's implementation, please refer to:
+- `.claude/skills/aws-architecture-diagram/README_en.md` - English skill documentation
+- `.claude/skills/aws-architecture-diagram/SKILL.md` - Feature details
+- `.claude/skills/aws-architecture-diagram/REFERENCE.md` - Technical reference

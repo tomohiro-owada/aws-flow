@@ -1,10 +1,13 @@
 # AWS Architecture Diagram Skill
 
-**Languages:** [English](README_en.md) | [日本語](README.md)
+**Languages:** [English](README.md) | [日本語](README_ja.md)
 
 ---
 
 Mermaidダイアグラムやテキスト記述からAWS Architecture Diagram（インタラクティブなHTML図）を生成するスキルです。
+
+<img width="1183" height="840" alt="スクリーンショット 2025-11-15 午前10 28 57" src="https://github.com/user-attachments/assets/89160cfc-e037-41c9-b03e-032741531ab3" />
+
 
 ## 🚀 クイックスタート
 
@@ -18,32 +21,11 @@ Mermaidダイアグラムやテキスト記述からAWS Architecture Diagram（�
 2. 「Architecture icons」と「Architecture group icons」をダウンロード
 3. ダウンロードしたファイルを以下のディレクトリに展開：
 
-```
-.claude/skills/aws-architecture-diagram/assets/
-├── Architecture-Service-Icons_02072025/
-│   ├── Arch_Analytics/
-│   ├── Arch_Compute/
-│   ├── Arch_Database/
-│   ├── Arch_Storage/
-│   ├── Arch_Security-Identity-Compliance/
-│   ├── Arch_App-Integration/
-│   ├── Arch_Containers/
-│   ├── Arch_Developer-Tools/
-│   ├── Arch_Management-Governance/
-│   ├── Arch_Networking-Content-Delivery/
-│   ├── Arch_Artificial-Intelligence/
-│   ├── Arch_Migration-Modernization/
-│   └── ... (その他のカテゴリ)
-│
-└── Architecture-Group-Icons_02072025/
-    ├── AWS-Cloud/
-    ├── Region/
-    ├── Availability-Zone/
-    ├── Virtual-private-cloud-VPC/
-    ├── Public-subnet/
-    ├── Private-subnet/
-    └── ... (その他のグループアイコン)
-```
+`.claude/skills/aws-architecture-diagram/assets`
+- Architecture-Group-Icons
+- Architecture-Service-Icons
+- Category-Icons
+- Resource-Icons
 
 **ファイル構成の例：**
 

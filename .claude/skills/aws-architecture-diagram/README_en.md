@@ -1,6 +1,6 @@
 # AWS Architecture Diagram Skill
 
-**Languages:** [日本語](README.md) | [English](README_en.md)
+**Languages:** [English](README_en.md) | [日本語](README.md)
 
 ---
 
